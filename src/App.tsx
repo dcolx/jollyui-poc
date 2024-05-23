@@ -11,11 +11,8 @@ function App() {
         <ReusableCombobox
           intent="secondary"
           size="small"
-          selectionBehavior="toggle"
-          selectionMode="multiple"
           placeholder="Select an animal..."
-          menuTrigger="focus"
-          onSelectionChange={(i) => alert(i)}
+          // onSelectionChange={(i) => alert(i)}
         >
           <ComboboxSection>
             <ComboboxLabel separator>Animals section 1</ComboboxLabel>

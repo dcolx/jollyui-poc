@@ -152,6 +152,9 @@ const ComboboxSeparator = ({ className, ...props }: SeparatorProps) => (
   <Separator className={cn("-mx-1 my-1 h-px bg-muted", className)} {...props} />
 );
 
+/**
+ * @see: https://react-spectrum.adobe.com/react-aria/Popover.html
+ */
 const ComboboxPopover = ({ className, ...props }: PopoverProps) => (
   <Popover
     className={(values) =>
@@ -187,5 +190,3 @@ export {
   ComboboxSeparator,
   ComboboxCollection,
 };
-
-

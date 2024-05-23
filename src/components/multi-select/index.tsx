@@ -25,18 +25,12 @@ type ComboboxProps = Pick<
 
 export function ReusableCombobox({
   children,
-  selectionBehavior,
-  selectionMode,
   placeholder,
   intent,
   size,
   ...props
-}: ComboboxProps &
-  ComboboxVariants &
-  Pick<
-    React.ComponentProps<typeof ComboboxListBox>,
-    "children" | "selectionBehavior" | "selectionMode"
-  > &
+}: ComboboxVariants &
+  Pick<React.ComponentProps<typeof ComboboxListBox>, "children"> &
   Pick<React.ComponentProps<typeof ComboboxInput>, "placeholder">) {
   const variants: ComboboxVariants = {
     intent,
@@ -74,24 +68,33 @@ export function ReusableCombobox({
       <DialogTrigger>
         {/* <Input type="text" />
         <Button>Multiselect</Button> */}
-        <Group className="flex rounded-lg bg-white bg-opacity-90 focus-within:bg-opacity-100 transition shadow-md ring-1 ring-black/10 focus-visible:ring-2 focus-visible:ring-black">
+        <Group
+          //   onFocus={() => {
+          //     console.log("zzzzz");
+          //     setIsOpen(true);
+          //   }}
+          //   onBlur={() => {
+          //     setIsOpen(false);
+          //   }}
+          className="flex rounded-lg bg-white bg-opacity-90 focus-within:bg-opacity-100 transition shadow-md ring-1 ring-black/10 focus-visible:ring-2 focus-visible:ring-black"
+        >
           <input
             placeholder="X selected items"
             ref={inputRef}
+            // onBlur={() => {
+            //   // setIsOpen(false)
+            // }}
             onFocus={() => {
               setIsOpen(true);
-            }}
-            onBlur={() => {
-              // setIsOpen(false)
             }}
             className="flex-1 w-full border-none py-2 px-3 leading-5 text-gray-900 bg-transparent outline-none text-base"
           />
 
           <Button
-            onPress={() => {
-              setIsOpen(true);
-            }}
-            className="px-3 flex items-center border-none outline-none"
+            // onPress={() => {
+            //   setIsOpen(true);
+            // }}
+            className="px-3 flex items-center border-none outline-none pointer-events-noneeee"
           >
             <ChevronsUpDown aria-hidden="true" className="h-4 w-4 opacity-50" />
           </Button>
@@ -99,14 +102,27 @@ export function ReusableCombobox({
         <ComboboxPopover
           style={popoverStyle}
           triggerRef={containerRef}
-          isOpen={isOpen}
+          //   scrollRef={containerRef}
           isNonModal={true}
-          onOpenChange={setIsOpen}
+          isOpen={isOpen}
+          //   onOpenChange={() => {
+          //     alert("zzz");
+          //     console.log("onOpenChange");
+          //   }}
+          shouldCloseOnInteractOutside={(e) => {
+            console.log("TEST!!!!!!");
+            setIsOpen(false);
+            return true;
+          }}
         >
           <ComboboxListBox
+            autoFocus
             className={containerVariants(variants)}
-            selectionBehavior={selectionBehavior}
-            selectionMode={selectionMode}
+            // selectionBehavior='toggle'
+            selectionMode="multiple"
+            onFocusChange={(isFocused) => {
+              if (!isFocused) setIsOpen(false);
+            }}
           >
             {children}
           </ComboboxListBox>
@@ -123,4 +139,4 @@ export {
   ComboboxItem,
   ComboboxSeparator,
   ComboboxCollection,
-} from './components';
+} from "./components";
