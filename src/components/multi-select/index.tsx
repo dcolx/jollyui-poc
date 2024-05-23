@@ -8,21 +8,18 @@ import {
   ComboboxListBox,
   ComboboxInput,
   ComboboxPopover,
-  ComboBox,
 } from "./components";
 
 type ComboboxVariants = VariantProps<typeof inputVariants> &
   VariantProps<typeof containerVariants>;
 
-type ComboboxProps = Pick<
-  React.ComponentProps<typeof ComboBox>,
-  | "onSelectionChange"
-  | "allowsCustomValue"
-  | "selectedKey"
-  | "aria-label"
-  | "menuTrigger"
->;
-
+/*
+TODO:
+1. Filter
+2. Clear all
+3. Persist selection
+4. Display selected item
+*/
 export function ReusableCombobox({
   children,
   placeholder,
@@ -39,62 +36,35 @@ export function ReusableCombobox({
 
   const inputRef = React.useRef<HTMLInputElement>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
-
-  const [popoverStyle, setPopoverStyle] = React.useState({});
-
-  React.useEffect(function updatePopoverStyle() {
-    function onResize() {
-      setPopoverStyle({
-        width: containerRef.current?.clientWidth,
-      });
-    }
-    onResize();
-    window.addEventListener("resize", onResize);
-
-    return () => {
-      window.removeEventListener("resize", onResize);
-    };
-  }, []);
+  const buttonRef = React.useRef<HTMLButtonElement>(null);
+  const listRef = React.useRef<HTMLDivElement>(null);
+  const popoverStyle = usePopoverStyle(containerRef);
 
   const [isOpen, setIsOpen] = React.useState(false);
 
   return (
-    <div
-      ref={containerRef}
-      onBlur={() => {
-        // setIsOpen(false)
-      }}
-    >
+    <div ref={containerRef}>
       <DialogTrigger>
-        {/* <Input type="text" />
-        <Button>Multiselect</Button> */}
-        <Group
-          //   onFocus={() => {
-          //     console.log("zzzzz");
-          //     setIsOpen(true);
-          //   }}
-          //   onBlur={() => {
-          //     setIsOpen(false);
-          //   }}
-          className="flex rounded-lg bg-white bg-opacity-90 focus-within:bg-opacity-100 transition shadow-md ring-1 ring-black/10 focus-visible:ring-2 focus-visible:ring-black"
-        >
+        <Group className="flex rounded-lg bg-white bg-opacity-90 focus-within:bg-opacity-100 transition shadow-md ring-1 ring-black/10 focus-visible:ring-2 focus-visible:ring-black">
           <input
-            placeholder="X selected items"
+            placeholder="select something!"
             ref={inputRef}
-            // onBlur={() => {
-            //   // setIsOpen(false)
-            // }}
             onFocus={() => {
               setIsOpen(true);
+            }}
+            onBlur={(e) => {
+              if (!listRef.current?.contains(e.relatedTarget)) setIsOpen(false);
+            }}
+            onKeyDownCapture={(e) => {
+              if (["ArrowUp", "ArrowDown"].includes(e.key))
+                listRef.current?.focus();
             }}
             className="flex-1 w-full border-none py-2 px-3 leading-5 text-gray-900 bg-transparent outline-none text-base"
           />
 
           <Button
-            // onPress={() => {
-            //   setIsOpen(true);
-            // }}
-            className="px-3 flex items-center border-none outline-none pointer-events-noneeee"
+            ref={buttonRef}
+            className="px-3 flex items-center border-none outline-none pointer-events-none"
           >
             <ChevronsUpDown aria-hidden="true" className="h-4 w-4 opacity-50" />
           </Button>
@@ -102,26 +72,18 @@ export function ReusableCombobox({
         <ComboboxPopover
           style={popoverStyle}
           triggerRef={containerRef}
-          //   scrollRef={containerRef}
           isNonModal={true}
           isOpen={isOpen}
-          //   onOpenChange={() => {
-          //     alert("zzz");
-          //     console.log("onOpenChange");
-          //   }}
-          shouldCloseOnInteractOutside={(e) => {
-            console.log("TEST!!!!!!");
-            setIsOpen(false);
-            return true;
-          }}
+          offset={0}
         >
           <ComboboxListBox
-            autoFocus
+            ref={listRef}
             className={containerVariants(variants)}
-            // selectionBehavior='toggle'
             selectionMode="multiple"
             onFocusChange={(isFocused) => {
-              if (!isFocused) setIsOpen(false);
+              if (isFocused) return;
+              setIsOpen(false);
+              buttonRef.current?.focus();
             }}
           >
             {children}
@@ -140,3 +102,21 @@ export {
   ComboboxSeparator,
   ComboboxCollection,
 } from "./components";
+
+function usePopoverStyle(containerRef: React.RefObject<HTMLDivElement>) {
+  const [popoverStyle, setPopoverStyle] = React.useState({});
+  React.useEffect(function updatePopoverStyle() {
+    function onResize() {
+      setPopoverStyle({
+        width: containerRef.current?.clientWidth,
+      });
+    }
+    onResize();
+    window.addEventListener("resize", onResize);
+    return () => {
+      window.removeEventListener("resize", onResize);
+    };
+  }, []);
+
+  return popoverStyle;
+}

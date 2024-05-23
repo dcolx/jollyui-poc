@@ -168,16 +168,20 @@ const ComboboxPopover = ({ className, ...props }: PopoverProps) => (
   />
 );
 
-export const ComboboxListBox = <T extends object>({
-  className,
-  ...props
-}: ListBoxProps<T>) => (
-  <ListBox
-    className={(values) =>
-      cn("p-1", typeof className === "function" ? className(values) : className)
-    }
-    {...props}
-  />
+
+export const ComboboxListBox = React.forwardRef<HTMLDivElement, ListBoxProps<object>>(
+  ({className, ...props}, ref) => (
+    <ListBox
+      ref={ref}
+      className={(values) =>
+        cn(
+          "p-1",
+          typeof className === "function" ? className(values) : className
+        )
+      }
+      {...props}
+    />
+  )
 );
 
 export {
