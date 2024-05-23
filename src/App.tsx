@@ -1,10 +1,46 @@
 import { Button } from './components/button';
 import { Input } from './components/input';
 import './App.css';
+import { ReusableCombobox, ComboboxSection, ComboboxLabel, ComboboxItem } from './components/multi-select';
 
 function App() {
   return (
     <main>
+      <section>
+        <h1>Combobox</h1>
+        <ReusableCombobox
+          intent="secondary"
+          size="small"
+          selectionBehavior="toggle"
+          selectionMode="multiple"
+          placeholder="Select an animal..."
+          menuTrigger="focus"
+          onSelectionChange={(i) => alert(i)}
+        >
+          <ComboboxSection>
+            <ComboboxLabel separator>Animals section 1</ComboboxLabel>
+            <ComboboxItem textValue="Cat" id="cat-id">
+              Cat
+            </ComboboxItem>
+            <ComboboxItem textValue="Dog" id="dog-id">
+              Dog
+            </ComboboxItem>
+            <ComboboxItem textValue="Kangaroo" id="kangaroo-id">
+              Kangaroo
+            </ComboboxItem>
+          </ComboboxSection>
+          <ComboboxSection>
+            <ComboboxLabel separator>Animals section 2</ComboboxLabel>
+            <ComboboxItem textValue="Panda" id="panda-id">
+              Panda
+            </ComboboxItem>
+            <ComboboxItem textValue="Snake" id="snake-id">
+              Snake
+            </ComboboxItem>
+          </ComboboxSection>
+        </ReusableCombobox>
+      </section>
+
       <section>
         <h1>Input examples</h1>
         <p className="py-1">
