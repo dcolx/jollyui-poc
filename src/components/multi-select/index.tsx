@@ -64,7 +64,10 @@ export function ReusableCombobox({
 
           <Button
             ref={buttonRef}
-            className="px-3 flex items-center border-none outline-none pointer-events-none"
+            className="px-3 flex items-center border-none outline-none"
+            onPress={() => {
+              inputRef.current?.focus();
+            }}
           >
             <ChevronsUpDown aria-hidden="true" className="h-4 w-4 opacity-50" />
           </Button>
@@ -80,8 +83,10 @@ export function ReusableCombobox({
             ref={listRef}
             className={containerVariants(variants)}
             selectionMode="multiple"
-            onFocusChange={(isFocused) => {
-              if (isFocused) return;
+            onBlur={(e) => {
+              if (e.relatedTarget === inputRef.current) {
+                return;
+              }
               setIsOpen(false);
               buttonRef.current?.focus();
             }}
