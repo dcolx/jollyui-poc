@@ -1,5 +1,5 @@
 import { VariantProps } from "class-variance-authority";
-import { ChevronsUpDown } from "lucide-react";
+import { ChevronDown, ChevronsUpDown, X } from "lucide-react";
 import React from "react";
 import { Input, Group, Button } from "react-aria-components";
 import {
@@ -9,24 +9,38 @@ import {
   ComboboxInput,
   ComboboxPopover,
 } from "./components";
+import { cn } from "@/lib/utils";
+import { MultiselectListbox } from "./multiselect-listbox";
 
 type ComboboxVariants = VariantProps<typeof inputVariants> &
   VariantProps<typeof containerVariants>;
 
-/*
-TODO:
-1. Filter
-2. Clear all
-3. Persist selection
-4. Display selected item
-*/
+  type Item = {
+    id: string;
+    label: string;
+  };
+  
+  export type MultiselectProps = {
+    items: Item[];
+    selectedIds: string[];
+    onItemChange: (ids: string[]) => void;
+    onChange?: () => void;
+    suffix?: string;
+  } & Omit<React.ComponentProps<typeof Input>, "onChange"> & ComboboxVariants;
+  
+
 export function ReusableCombobox({
-  children,
   placeholder,
-  intent,
+  items: originalItems,
+  intent = "primary",
+  // border = "rounded",
   size,
+  selectedIds,
+  onItemChange,
+  onChange,
+  suffix,
   ...props
-}: ComboboxVariants &
+}: MultiselectProps &
   Pick<React.ComponentProps<typeof ComboboxListBox>, "children"> &
   Pick<React.ComponentProps<typeof ComboboxInput>, "placeholder">) {
   const variants: ComboboxVariants = {
@@ -36,98 +50,252 @@ export function ReusableCombobox({
 
   const inputRef = React.useRef<HTMLInputElement>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
-  const buttonRef = React.useRef<HTMLButtonElement>(null);
+  const parentRef = React.useRef<HTMLDivElement>(null);
+  const buttonRef = React.useRef<HTMLSpanElement>(null);
   const listRef = React.useRef<HTMLDivElement>(null);
+  const triggerRef = React.useRef(null);
   const popoverStyle = usePopoverStyle(containerRef);
-
   const [isOpen, setIsOpen] = React.useState(false);
+  const [inputValue, setInputValue] = React.useState("");
+  const [items, setItems] = React.useState(originalItems);
+  const [filtering, setFiltering] = React.useState(false);
+  const changed = React.useRef(false);
+  const showClearButton = React.useMemo(
+    () => !isOpen && selectedIds.length > 0,
+    [isOpen, selectedIds.length]
+  );
 
-  const openCombobox = React.useCallback(() => {
+  const openPopover = React.useCallback(() => {
+    setInputValue("");
     setIsOpen(true);
   }, []);
 
+  const closePopover = React.useCallback(() => {
+    // if (selectedKeys === "all") {
+    //   setInputValue(originalItems[0].label);
+    // } else if (selectedKeys.size > 0) {
+    //   let firstItemIndex = -1;
+    //   for (const newKey of selectedKeys) {
+    //     const index = originalItems.findIndex((f) => f.id === newKey);
+    //     if (firstItemIndex === -1 || index < firstItemIndex) {
+    //       firstItemIndex = index;
+    //     }
+    //   }
+
+    //   setInputValue(originalItems[firstItemIndex].label);
+    // } else {
+    //   setInputValue("");
+    // }
+    setIsOpen(false);
+  }, []);
+
+  const handleChanged = React.useCallback(() => {
+    if (changed.current) {
+      onChange?.();
+      changed.current = false;
+    }
+  }, [onChange]);
+
+  React.useEffect(() => {
+    function handlePopoverClose(event: Event) {
+      if (isOpen && event.target === document) {
+        closePopover();
+      }
+    }
+
+    document.addEventListener("scroll", handlePopoverClose, true);
+
+    return () => {
+      document.removeEventListener("scroll", handlePopoverClose);
+    };
+  }, [closePopover, isOpen]);
+
   return (
-    <div ref={containerRef}>
-      <Group className="flex rounded-lg bg-white bg-opacity-90 focus-within:bg-opacity-100 transition shadow-md ring-1 ring-black/10 focus-visible:ring-2 focus-visible:ring-black">
+    <div ref={parentRef} className="w-full h-[48px]">
+      <Group ref={containerRef} className={"flex h-full items-center"}>
         <Input
-          placeholder="select something!"
           ref={inputRef}
-          onFocus={openCombobox}
-          onClick={openCombobox}
+          // intent={intent}
+          // border={border}
+          placeholder={placeholder}
+          value={inputValue}
+          onFocus={(event) => {
+            if (!listRef.current?.contains(event.relatedTarget)) {
+              if (!isOpen) {
+                openPopover();
+              }
+
+              setFiltering(false);
+              setItems(originalItems);
+            }
+          }}
+          onChange={(e) => {
+            const value = e.target.value;
+
+            setInputValue(value);
+            if (value.length === 0) {
+              setFiltering(false);
+              setItems(originalItems);
+            } else {
+              setFiltering(true);
+              setItems(
+                originalItems.filter((f) =>
+                  f.label.toLowerCase().includes(e.target.value.toLowerCase())
+                )
+              );
+            }
+          }}
           onBlur={(e) => {
-            if (!listRef.current?.contains(e.relatedTarget)) setIsOpen(false);
+            if (!listRef.current?.contains(e.relatedTarget)) {
+              handleChanged();
+              closePopover();
+            }
+          }}
+          onClick={() => {
+            if (items.length > 0) {
+              openPopover();
+            }
           }}
           onKeyDownCapture={(e) => {
+            if (!isOpen) {
+              setIsOpen(true);
+            }
+
             if (["ArrowDown"].includes(e.key)) {
-              e.preventDefault();
               listRef.current?.focus();
             }
+
+            if (["Enter"].includes(e.key)) {
+              handleChanged();
+              closePopover();
+            }
           }}
-          className="flex-1 w-full border-none py-2 px-3 leading-5 text-gray-900 bg-transparent outline-none text-base"
+          {...props}
         />
 
-        <Button
-            ref={buttonRef}
-            excludeFromTabOrder
-            className="px-3 flex items-center border-none outline-none pointer-events-none"
-            onPress={() => {
+        <span
+          className={cn("py-12", {
+            "pr-6": showClearButton,
+            "pr-12": !showClearButton,
+          })}
+        >
+          {suffix}
+        </span>
+
+        <span
+          ref={buttonRef}
+          className={cn("pb-12 pt-14 cursor-pointer pr-10", {
+            hidden: !showClearButton,
+          })}
+          aria-hidden="true"
+          tabIndex={-1}
+          role="button"
+          onClick={() => {
+            if (showClearButton) {
+              changed.current = true;
+              setInputValue("");
+              onItemChange([]);
+              handleChanged();
+            } else {
               inputRef.current?.focus();
-            }}
-          >
-            <ChevronsUpDown aria-hidden="true" className="h-4 w-4 opacity-50" />
-          </Button>
-      </Group>
-      <ComboboxPopover
-        style={popoverStyle}
-        triggerRef={containerRef}
-        isNonModal={true}
-        isOpen={isOpen}
-        offset={0}
-      >
-        <ComboboxListBox
-          ref={listRef}
-          className={containerVariants(variants)}
-          selectionMode="multiple"
-          onBlur={(e) => {
-            if (e.relatedTarget === inputRef.current) {
-              return;
             }
-            inputRef.current?.focus();
-            setIsOpen(false);
           }}
         >
-          {children}
-        </ComboboxListBox>
-      </ComboboxPopover>
+          {showClearButton ? <X /> : <ChevronDown />}
+        </span>
+      </Group>
+      {items.length > 0 && parentRef.current ? (
+        <ComboboxPopover
+          className={"max-h-[240px] overflow-y-auto"}
+          UNSTABLE_portalContainer={parentRef.current}
+          triggerRef={triggerRef}
+          isOpen={isOpen}
+          scrollRef={listRef}
+          style={popoverStyle}
+          isNonModal={true}
+          maxHeight={240}
+          offset={0}
+        >
+          <MultiselectListbox
+            ref={listRef}
+            allItems={originalItems}
+            isFiltering={filtering}
+            items={items}
+            isOpen={isOpen}
+            selectedIds={selectedIds}
+            onItemChange={(keys) => {
+              changed.current = true;
+              onItemChange(keys);
+            }}
+            onBlur={(event) => {
+              if (event.relatedTarget === inputRef.current) {
+                return;
+              }
+
+              if (
+                event.relatedTarget === null ||
+                !(event.relatedTarget instanceof HTMLElement)
+              ) {
+                inputRef.current?.focus();
+              } else {
+                event.relatedTarget.focus();
+              }
+
+              handleChanged();
+              closePopover();
+            }}
+            // onClose={(selectedKeys) => {
+            //   if (selectedKeys === "all") {
+            //     setInputValue(originalItems[0].label);
+            //   } else if (selectedKeys.size > 0) {
+            //     let firstItemIndex = -1;
+            //     for (const newKey of selectedKeys) {
+            //       const index = originalItems.findIndex((f) => f.id === newKey);
+            //       if (firstItemIndex === -1 || index < firstItemIndex) {
+            //         firstItemIndex = index;
+            //       }
+            //     }
+
+            //     setInputValue(originalItems[firstItemIndex].label);
+            //   } else {
+            //     setInputValue("");
+            //   }
+
+            //   setIsOpen(false);
+            // }}
+          />
+        </ComboboxPopover>
+      ) : null}
     </div>
   );
 }
 
-export {
-  ComboboxSection,
-  ComboboxPopover,
-  ComboboxLabel,
-  ComboboxItem,
-  ComboboxSeparator,
-  ComboboxCollection,
-} from "./components";
-
-function usePopoverStyle(containerRef: React.RefObject<HTMLDivElement>) {
+function usePopoverStyle(elementRef: React.RefObject<HTMLDivElement>) {
   const [popoverStyle, setPopoverStyle] = React.useState({});
   React.useEffect(
     function updatePopoverStyle() {
-      function onResize() {
-        setPopoverStyle({
-          width: containerRef.current?.clientWidth,
-        });
+      const element = elementRef.current;
+
+      const handleWidthChange = () => {
+        if (element) {
+          setPopoverStyle({ width: element.clientWidth });
+        }
+      };
+
+      handleWidthChange();
+
+      const resizeObserver = new ResizeObserver(handleWidthChange);
+      if (element) {
+        resizeObserver.observe(element);
       }
-      onResize();
-      window.addEventListener("resize", onResize);
+
       return () => {
-        window.removeEventListener("resize", onResize);
+        if (element) {
+          resizeObserver.unobserve(element);
+        }
       };
     },
-    [containerRef]
+    [elementRef]
   );
 
   return popoverStyle;
